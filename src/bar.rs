@@ -216,6 +216,8 @@ impl Bar {
                     (ss.config.tag_urgent_bg, ss.config.tag_urgent_fg)
                 } else if tag.is_focused {
                     (ss.config.tag_focused_bg, ss.config.tag_focused_fg)
+                } else if tag.is_semi_focused {
+                    (ss.config.tag_semi_focused_bg, ss.config.tag_semi_focused_fg)
                 } else if tag.is_active {
                     (ss.config.tag_bg, ss.config.tag_fg)
                 } else if !ss.config.hide_inactive_tags {

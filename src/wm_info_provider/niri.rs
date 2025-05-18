@@ -69,6 +69,7 @@ impl WmInfoProvider for NiriInfoProvider {
                 is_focused: ws.is_active,
                 is_active: i < output_workspaces.len() - 1 || ws.is_focused,
                 is_urgent: false,
+                is_semi_focused: false,
             })
             .collect()
     }

@@ -68,7 +68,16 @@ pub fn bind(conn: &mut Connection<State>, config: &WmConfig) -> Box<dyn WmInfoPr
 pub struct Tag {
     pub id: u32,
     pub name: String,
+
+    /// The tag is focused and on the currently focused output.
     pub is_focused: bool,
+
+    /// The tag is focused, but not on the currently focused output.
+    pub is_semi_focused: bool,
+
+    /// The tag contains views.
     pub is_active: bool,
+
+    /// The tag contains views marked as “urgent”.
     pub is_urgent: bool,
 }

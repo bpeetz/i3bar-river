@@ -59,6 +59,7 @@ impl WmInfoProvider for HyprlandInfoProvider {
                 is_focused: ws.name == self.active_name,
                 is_active: true,
                 is_urgent: false,
+                is_semi_focused: false,
             })
             .collect()
     }
