@@ -338,16 +338,55 @@ impl Bar {
         }
 
         // Display the blocks
-        render_blocks(
-            &cairo_ctx,
-            &ss.config,
-            palette,
-            ss.blocks_cache.get_computed(),
-            &mut self.blocks_btns,
-            offset_left,
-            width_f,
-            height_f,
-        );
+        {
+            if !ss.blocks_cache.get_computed().is_empty() {
+                let first_block = &ss.blocks_cache.get_computed()[0];
+
+                let blocks = &ss.blocks_cache.get_computed()[1..];
+
+                let other_start = render_blocks(
+                    &cairo_ctx,
+                    &ss.config,
+                    palette,
+                    blocks,
+                    &mut self.blocks_btns,
+                    offset_left,
+                    width_f,
+                    height_f,
+                );
+
+                // Draw the first block _after_ the other ones, so that we can nudge it more to the
+                // left, if the others are spanning over the middle.
+                let mut start = (width_f / 2.0) - (first_block.full.width / 2.0);
+                if start + first_block.full.width > other_start {
+                    start = other_start
+                        - first_block.full.width
+                        - first_block.block.separator_block_width as f64;
+                }
+
+                first_block.full.render(
+                    &cairo_ctx,
+                    RenderOptions {
+                        x_offset: start,
+                        bar_height: height_f,
+                        fg_color: first_block.block.color.unwrap_or(palette.color),
+                        bg_color: first_block.block.background,
+                        r_left: ss.config.blocks_r,
+                        r_right: ss.config.blocks_r,
+                        overlap: ss.config.blocks_overlap,
+                    },
+                );
+
+                self.blocks_btns.push(
+                    start,
+                    first_block.full.width,
+                    (
+                        first_block.block.name.clone(),
+                        first_block.block.instance.clone(),
+                    ),
+                );
+            }
+        }
 
         self.viewport
             .set_destination(conn, self.width as i32, self.height as i32);
@@ -422,7 +461,7 @@ fn render_blocks(
     offset_left: f64,
     full_width: f64,
     full_height: f64,
-) {
+) -> f64 {
     context.rectangle(offset_left, 0.0, full_width - offset_left, full_height);
     context.clip();
 
@@ -507,6 +546,7 @@ fn render_blocks(
     }
 
     // Render blocks
+    let leftmost_start = full_width - blocks_width;
     buttons.clear();
     for series in blocks_computed {
         let s_len = series.blocks.len();
@@ -550,6 +590,7 @@ fn render_blocks(
     }
 
     context.reset_clip();
+    leftmost_start
 }
 
 fn layer_surface_cb(ctx: EventCtx<State, ZwlrLayerSurfaceV1>) {
