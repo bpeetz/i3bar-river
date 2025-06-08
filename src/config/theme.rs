@@ -1,7 +1,5 @@
 use serde::Deserialize;
 
-use crate::color::Color;
-
 use super::Palette;
 
 mod source {
@@ -36,30 +34,32 @@ mod source {
     #[derive(Deserialize, Default)]
     #[serde(deny_unknown_fields, default)]
     pub(super) struct Theme {
-        pub(super) palette: MaybePalette,
-        pub(super) unfocused_palette: MaybePalette,
+        pub(super) focused: MaybePalette,
+        pub(super) unfocused: MaybePalette,
     }
 
     impl MaybePalette {
-        pub(super) fn to_palette_with(self, p: Palette) -> Palette {
+        pub(super) fn to_palette_with(self, fallback: Palette) -> Palette {
             Palette {
-                background: self.background.unwrap_or(p.background),
-                color: self.color.unwrap_or(p.color),
-                separator: self.separator.unwrap_or(p.separator),
-                tag_fg: self.tag_fg.unwrap_or(p.tag_fg),
-                tag_bg: self.tag_bg.unwrap_or(p.tag_bg),
-                tag_focused_fg: self.tag_focused_fg.unwrap_or(p.tag_focused_fg),
-                tag_focused_bg: self.tag_focused_bg.unwrap_or(p.tag_focused_bg),
-                tag_urgent_fg: self.tag_urgent_fg.unwrap_or(p.tag_urgent_fg),
-                tag_urgent_bg: self.tag_urgent_bg.unwrap_or(p.tag_urgent_bg),
-                tag_inactive_fg: self.tag_inactive_fg.unwrap_or(p.tag_inactive_fg),
-                tag_inactive_bg: self.tag_inactive_bg.unwrap_or(p.tag_inactive_bg),
+                background: self.background.unwrap_or(fallback.background),
+                color: self.color.unwrap_or(fallback.color),
+                separator: self.separator.unwrap_or(fallback.separator),
+                tag_fg: self.tag_fg.unwrap_or(fallback.tag_fg),
+                tag_bg: self.tag_bg.unwrap_or(fallback.tag_bg),
+                tag_focused_fg: self.tag_focused_fg.unwrap_or(fallback.tag_focused_fg),
+                tag_focused_bg: self.tag_focused_bg.unwrap_or(fallback.tag_focused_bg),
+                tag_urgent_fg: self.tag_urgent_fg.unwrap_or(fallback.tag_urgent_fg),
+                tag_urgent_bg: self.tag_urgent_bg.unwrap_or(fallback.tag_urgent_bg),
+                tag_inactive_fg: self.tag_inactive_fg.unwrap_or(fallback.tag_inactive_fg),
+                tag_inactive_bg: self.tag_inactive_bg.unwrap_or(fallback.tag_inactive_bg),
 
-                hide_inactive_tags: self.hide_inactive_tags.unwrap_or(p.hide_inactive_tags),
-                show_tags: self.show_tags.unwrap_or(p.show_tags),
-                show_layout_name: self.show_layout_name.unwrap_or(p.show_layout_name),
-                blend: self.blend.unwrap_or(p.blend),
-                show_mode: self.show_mode.unwrap_or(p.show_mode),
+                hide_inactive_tags: self
+                    .hide_inactive_tags
+                    .unwrap_or(fallback.hide_inactive_tags),
+                show_tags: self.show_tags.unwrap_or(fallback.show_tags),
+                show_layout_name: self.show_layout_name.unwrap_or(fallback.show_layout_name),
+                blend: self.blend.unwrap_or(fallback.blend),
+                show_mode: self.show_mode.unwrap_or(fallback.show_mode),
             }
         }
     }
@@ -67,8 +67,8 @@ mod source {
 
 #[derive(Debug)]
 pub struct Theme {
-    pub palette: Palette,
-    pub unfocused_output: Palette, // inherits from `palette`
+    pub focused: Palette,
+    pub unfocused: Palette, // inherits from `focused`
 }
 impl<'de> Deserialize<'de> for Theme {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
