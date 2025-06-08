@@ -217,6 +217,15 @@ impl State {
         });
     }
 
+    /// The focused output was updated.
+    ///
+    /// Using this instead of [`Self::tags_updated`] avoids redrawing the tags.
+    pub fn output_focus_updated(&mut self, conn: &mut Connection<Self>, output: WlOutput) {
+        self.for_each_bar(Some(output), |bar, ss| {
+            bar.frame(conn, ss);
+        });
+    }
+
     pub fn layout_name_updated(&mut self, conn: &mut Connection<Self>, output: Option<WlOutput>) {
         self.for_each_bar(output, |bar, ss| {
             bar.set_layout_name(ss.wm_info_provider.get_layout_name(&bar.output));
