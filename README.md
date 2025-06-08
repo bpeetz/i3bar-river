@@ -98,6 +98,7 @@ max_tag = 9 # Show only the first nine tags
 # [output.eDP-1]
 # enable = false
 ```
+You can get your fully expanded current configuration by running `i3bar-river --print-config`.
 
 ## How progressive short mode and rounded corners work
 

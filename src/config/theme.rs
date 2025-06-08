@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::Palette;
 
@@ -65,45 +65,19 @@ mod source {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Default, Serialize)]
+#[serde(from = "source::Theme")]
 pub struct Theme {
     pub focused: Palette,
     pub unfocused: Palette, // inherits from `focused`
 }
-impl<'de> Deserialize<'de> for Theme {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let src = source::Theme::deserialize(deserializer)?;
 
-        Ok(Theme {
-            palette: src.palette.to_palette_with(Palette::default()),
-            unfocused_output: src
-                .unfocused_palette
-                .to_palette_with(src.palette.to_palette_with(unfocused_palette())),
-        })
-    }
-}
-
-fn unfocused_palette() -> Palette {
-    Palette {
-        // Use a darker white, to show that its unfocused
-        tag_fg: Color::from_rgba_hex(0xbbbbbbbb),
-        tag_focused_fg: Color::from_rgba_hex(0xbbbbbbbb),
-        tag_inactive_fg: Color::from_rgba_hex(0xbbbbbbbb),
-        tag_urgent_fg: Color::from_rgba_hex(0xbbbbbbbb),
-        color: Color::from_rgba_hex(0xbbbbbbbb),
-
-        ..Palette::default()
-    }
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        Self {
-            palette: Palette::default(),
-            unfocused_output: unfocused_palette(),
+impl From<source::Theme> for Theme {
+    fn from(src: source::Theme) -> Self {
+        let focused = src.focused.to_palette_with(Palette::default());
+        Theme {
+            focused,
+            unfocused: src.unfocused.to_palette_with(focused),
         }
     }
 }

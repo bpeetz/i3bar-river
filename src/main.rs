@@ -22,7 +22,9 @@ use std::io::{self, ErrorKind, Read};
 use std::os::fd::AsRawFd;
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clap::Parser;
+use config::Config;
 use signal_hook::consts::*;
 use wayrs_client::{Connection, IoMode};
 
@@ -35,10 +37,25 @@ struct Cli {
     /// The path to a config file.
     #[arg(short, long, value_name = "FILE")]
     config: Option<PathBuf>,
+
+    /// Print the parsed config (i.e., your specified values supplemented with the defaults)
+    #[arg(short, long)]
+    print_config: bool,
 }
 
 fn main() -> anyhow::Result<()> {
     let args = Cli::parse();
+
+    if args.print_config {
+        let config = Config::new(args.config.as_deref()).context("Failed to read config file")?;
+
+        println!(
+            "{}",
+            toml::to_string_pretty(&config).expect("Should always work")
+        );
+
+        return Ok(());
+    }
 
     let (mut sig_read, sig_write) = io::pipe()?;
     signal_hook::low_level::pipe::register(SIGUSR1, sig_write)?;

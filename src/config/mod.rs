@@ -4,7 +4,7 @@ use crate::protocol::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
 
 use anyhow::{Context, Result};
 use pangocairo::pango::FontDescription;
-use serde::{Deserialize, de};
+use serde::{Deserialize, Serialize, de};
 
 use std::collections::HashMap;
 use std::fs::read_to_string;
@@ -12,9 +12,10 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::{env, fmt};
 
+mod migrations;
 mod theme;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(deny_unknown_fields, default)]
 pub struct Config {
     pub command: Option<String>,
@@ -48,7 +49,7 @@ pub struct Config {
     pub output: HashMap<String, OutputOverrides>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Palette {
     // colors
     pub background: Color,
@@ -176,7 +177,7 @@ fn config_path() -> Option<PathBuf> {
     path.exists().then_some(path)
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Position {
     Top,
@@ -192,7 +193,7 @@ impl From<Position> for zwlr_layer_surface_v1::Anchor {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum Layer {
     Background,
@@ -212,28 +213,35 @@ impl From<Layer> for zwlr_layer_shell_v1::Layer {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WmConfig {
     pub river: RiverConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RiverConfig {
     pub max_tag: u8,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OutputOverrides {
     #[serde(default)]
     enable: Option<bool>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
+#[serde(into = "String")]
 pub struct Font(pub FontDescription);
 
 impl Font {
     pub fn new(desc: &str) -> Self {
         Self(FontDescription::from_string(desc))
+    }
+}
+
+impl From<Font> for String {
+    fn from(value: Font) -> Self {
+        value.to_string()
     }
 }
 

@@ -1,9 +1,9 @@
 use pangocairo::cairo::Context;
-use serde::de;
-use std::fmt;
-use std::str::FromStr;
+use serde::{Serialize, de};
+use std::{fmt, str::FromStr};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(into = "String")]
 pub struct Color {
     red: f64,
     green: f64,
@@ -50,6 +50,24 @@ impl FromStr for Color {
         };
 
         Ok(Self::from_rgba(r, g, b, a))
+    }
+}
+
+impl From<Color> for String {
+    fn from(value: Color) -> Self {
+        let r = (value.red * 255.0) as u64;
+        let g = (value.green * 255.0) as u64;
+        let b = (value.blue * 255.0) as u64;
+        let a = (value.alpha * 255.0) as u64;
+
+        assert!(r <= u8::MAX as u64);
+        assert!(g <= u8::MAX as u64);
+        assert!(b <= u8::MAX as u64);
+        assert!(a <= u8::MAX as u64);
+
+        let hex: u64 = (r << 24) | (g << 16) | (b << 8) | a;
+
+        format!("#{hex:x}")
     }
 }
 
