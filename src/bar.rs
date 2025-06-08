@@ -6,12 +6,12 @@ use wayrs_utils::shm_alloc::BufferSpec;
 use crate::blocks_cache::ComputedBlock;
 use crate::button_manager::ButtonManager;
 use crate::color::Color;
-use crate::config::Position;
+use crate::config::{Config, Palette, Position};
 use crate::i3bar_protocol;
 use crate::output::Output;
 use crate::pointer_btn::PointerBtn;
 use crate::protocol::*;
-use crate::shared_state::{SharedState, sfo};
+use crate::shared_state::SharedState;
 use crate::state::State;
 use crate::text::{self, ComputedText, RenderOptions};
 use crate::wm_info_provider::Tag;
@@ -194,44 +194,38 @@ impl Bar {
         let cairo_ctx = cairo::Context::new(&cairo_surf).expect("cairo context");
         cairo_ctx.scale(scale_f, scale_f);
 
-        if !sfo!(ss, &self.output, blend) {
+        let palette = if ss.wm_info_provider.is_output_focused(&self.output) {
+            &ss.config.theme.focused
+        } else {
+            &ss.config.theme.unfocused
+        };
+
+        if !palette.blend {
             cairo_ctx.set_operator(cairo::Operator::Source);
         }
 
         // Background
-        if sfo!(ss, &self.output, blend) {
+        if palette.blend {
             cairo_ctx.save().unwrap();
             cairo_ctx.set_operator(cairo::Operator::Source);
         }
-        sfo!(ss, &self.output, background).apply(&cairo_ctx);
+        palette.background.apply(&cairo_ctx);
         cairo_ctx.paint().unwrap();
-        if sfo!(ss, &self.output, blend) {
+        if palette.blend {
             cairo_ctx.restore().unwrap();
         }
 
         // Compute tags
-        if sfo!(ss, &self.output, show_tags) && self.tags_computed.is_empty() {
+        if palette.show_tags && self.tags_computed.is_empty() {
             for tag in &self.tags {
                 let (bg, fg) = if tag.is_urgent {
-                    (
-                        sfo!(ss, &self.output, tag_urgent_bg),
-                        sfo!(ss, &self.output, tag_urgent_fg),
-                    )
+                    (palette.tag_urgent_bg, palette.tag_urgent_fg)
                 } else if tag.is_focused {
-                    (
-                        sfo!(ss, &self.output, tag_focused_bg),
-                        sfo!(ss, &self.output, tag_focused_fg),
-                    )
+                    (palette.tag_focused_bg, palette.tag_focused_fg)
                 } else if tag.is_active {
-                    (
-                        sfo!(ss, &self.output, tag_bg),
-                        sfo!(ss, &self.output, tag_fg),
-                    )
-                } else if !sfo!(ss, &self.output, hide_inactive_tags) {
-                    (
-                        sfo!(ss, &self.output, tag_inactive_bg),
-                        sfo!(ss, &self.output, tag_inactive_fg),
-                    )
+                    (palette.tag_bg, palette.tag_fg)
+                } else if !palette.hide_inactive_tags {
+                    (palette.tag_inactive_bg, palette.tag_inactive_fg)
                 } else {
                     continue;
                 };
@@ -280,7 +274,7 @@ impl Bar {
         }
 
         // Display layout name
-        if sfo!(ss, &self.output, show_layout_name) {
+        if palette.show_layout_name {
             if let Some(layout_name) = &self.layout_name {
                 let text = self.layout_name_computed.get_or_insert_with(|| {
                     ComputedText::new(
@@ -300,7 +294,7 @@ impl Bar {
                     RenderOptions {
                         x_offset: offset_left,
                         bar_height: height_f,
-                        fg_color: sfo!(ss, &self.output, tag_inactive_fg),
+                        fg_color: palette.tag_inactive_fg,
                         bg_color: None,
                         r_left: 0.0,
                         r_right: 0.0,
@@ -312,7 +306,7 @@ impl Bar {
         }
 
         // Display mode
-        if sfo!(ss, &self.output, show_mode) {
+        if palette.show_mode {
             if let Some(mode) = &self.mode_name {
                 let text = self.mode_computed.get_or_insert_with(|| {
                     ComputedText::new(
@@ -332,8 +326,8 @@ impl Bar {
                     RenderOptions {
                         x_offset: offset_left,
                         bar_height: height_f,
-                        fg_color: sfo!(ss, &self.output, tag_urgent_fg),
-                        bg_color: Some(sfo!(ss, &self.output, tag_urgent_bg)),
+                        fg_color: palette.tag_urgent_fg,
+                        bg_color: Some(palette.tag_urgent_bg),
                         r_left: ss.config.tags_r,
                         r_right: ss.config.tags_r,
                         overlap: 0.0,
@@ -346,8 +340,8 @@ impl Bar {
         // Display the blocks
         render_blocks(
             &cairo_ctx,
-            ss,
-            &self.output,
+            &ss.config,
+            palette,
             ss.blocks_cache.get_computed(),
             &mut self.blocks_btns,
             offset_left,
@@ -421,8 +415,8 @@ impl Bar {
 #[allow(clippy::too_many_arguments)]
 fn render_blocks(
     context: &cairo::Context,
-    ss: &SharedState,
-    output: &Output,
+    config: &Config,
+    palette: &Palette,
     blocks: &[ComputedBlock],
     buttons: &mut ButtonManager<(Option<String>, Option<String>)>,
     offset_left: f64,
@@ -528,15 +522,11 @@ fn render_blocks(
                 RenderOptions {
                     x_offset: full_width - blocks_width,
                     bar_height: full_height,
-                    fg_color: block.color.unwrap_or(sfo!(ss, &output, color)),
+                    fg_color: block.color.unwrap_or(palette.color),
                     bg_color: block.background,
-                    r_left: if i == 0 { ss.config.blocks_r } else { 0.0 },
-                    r_right: if i + 1 == s_len {
-                        ss.config.blocks_r
-                    } else {
-                        0.0
-                    },
-                    overlap: ss.config.blocks_overlap,
+                    r_left: if i == 0 { config.blocks_r } else { 0.0 },
+                    r_right: if i + 1 == s_len { config.blocks_r } else { 0.0 },
+                    overlap: config.blocks_overlap,
                 },
             );
             buttons.push(
@@ -548,10 +538,10 @@ fn render_blocks(
         }
 
         let separator_block_width = series.separator_block_width as f64;
-        if series.separator && ss.config.separator_width > 0.0 {
+        if series.separator && config.separator_width > 0.0 {
             let x = full_width - blocks_width + separator_block_width * 0.5;
-            sfo!(ss, &output, separator).apply(context);
-            context.set_line_width(ss.config.separator_width);
+            palette.separator.apply(context);
+            context.set_line_width(config.separator_width);
             context.move_to(x, full_height * 0.1);
             context.line_to(x, full_height * 0.9);
             context.stroke().unwrap();
