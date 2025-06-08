@@ -1,8 +1,9 @@
-use crate::color::Color;
-use crate::config::theme::Theme;
 use crate::protocol::{zwlr_layer_shell_v1, zwlr_layer_surface_v1};
+use crate::{color::Color, config::theme::Theme};
 
 use anyhow::{Context, Result};
+use migrations::OldConfig;
+use pangocairo::glib::g_warning;
 use pangocairo::pango::FontDescription;
 use serde::{Deserialize, Serialize, de};
 
@@ -146,7 +147,21 @@ impl Config {
         Ok(match path {
             Some(config_path) => {
                 let config = read_to_string(config_path).context("Failed to read configuration")?;
-                toml::from_str(&config).context("Failed to deserialize configuration")?
+                match toml::from_str(&config) {
+                    Ok(me) => me,
+                    Err(err) => {
+                        // This config could still be valid, if it is the old one.
+                        if let Ok(old) = toml::from_str(&config) {
+                            g_warning!(
+                                "i3bar-river",
+                                "Loading old config. Use `i3bar-river --print-config`, to see the new config."
+                            );
+                            <Self as From<OldConfig>>::from(old)
+                        } else {
+                            return Err(err).context("Failed to decode configuration");
+                        }
+                    }
+                }
             }
             None => {
                 eprintln!("Could not find the configuration path");
