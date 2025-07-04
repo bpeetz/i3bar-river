@@ -213,7 +213,7 @@ fn seat_status_cb(ctx: EventCtx<State, ZriverSeatStatusV1>) {
             status.is_focused = true;
 
             let output = status.output;
-            ctx.state.output_focus_updated(ctx.conn, output);
+            ctx.state.tags_updated(ctx.conn, Some(output));
         }
         zriver_seat_status_v1::Event::UnfocusedOutput(output) => {
             let river = ctx.state.shared_state.get_river().unwrap();
@@ -227,7 +227,7 @@ fn seat_status_cb(ctx: EventCtx<State, ZriverSeatStatusV1>) {
             status.is_focused = false;
 
             let output = status.output;
-            ctx.state.output_focus_updated(ctx.conn, output);
+            ctx.state.tags_updated(ctx.conn, Some(output));
         }
         _ => {}
     }
